@@ -91,6 +91,40 @@
       object-fit: contain; 
     }
 
+    /* Input Fields Style */
+    .input-group {
+      margin-top: 16px;
+      text-align: left;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-field {
+      width: 100%;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 15px;
+      box-sizing: border-box;
+      transition: border-color 0.2s ease;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    textarea.input-field {
+      resize: vertical;
+      min-height: 80px;
+    }
+
     .btn { 
       background-color: var(--primary-color); 
       color: #0f172a; 
@@ -191,6 +225,16 @@
     <img id="preview" alt="Preview Foto">
   </div>
 
+  <div class="input-group">
+    <label for="nama-toko">Nama Toko</label>
+    <input type="text" id="nama-toko" class="input-field" placeholder="Masukkan nama toko...">
+  </div>
+
+  <div class="input-group">
+    <label for="keterangan">Keterangan</label>
+    <textarea id="keterangan" class="input-field" placeholder="Tambahkan catatan atau keterangan lapangan..."></textarea>
+  </div>
+
   <div class="radio-group">
     <strong>Pilih Status Terkini</strong>
     <label><input type="radio" name="status" value="Terpasang" checked> Terpasang</label>
@@ -203,16 +247,21 @@
 </div>
 
 <script>
+  // ALAMAT WEB APP GOOGLE APPS SCRIPT ANDA
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxX5fAOmIw-MbxwEl0iKtStLU-8zSzsYcjpm_LvRG7tJb30UyO4VM9klBSo3SoZ9tFs/exec";
+
   let preview = document.getElementById('preview');
   let previewBox = document.getElementById('preview-box');
   let canvas = document.getElementById('canvas');
   let labelKamera = document.getElementById('label-kamera');
   let base64Image = "";
 
+  // Ambil data dashboard saat halaman di-load di GitHub
   window.onload = function() {
-    if (typeof google !== 'undefined') {
-      google.script.run.withSuccessHandler(updateDashboard).getLiveDashboardData();
-    }
+    fetch(WEB_APP_URL + "?action=getDashboard")
+      .then(response => response.json())
+      .then(data => updateDashboard(data))
+      .catch(err => console.log("Gagal memuat data dashboard awal:", err));
   };
 
   function prosesFoto(input) {
@@ -254,44 +303,77 @@
       alert("Harap ambil foto terlebih dahulu sebelum menyimpan!");
       return;
     }
+
+    let namaToko = document.getElementById('nama-toko').value.trim();
+    let keterangan = document.getElementById('keterangan').value.trim();
+
+    if (!namaToko) {
+      alert("Harap isi Nama Toko terlebih dahulu!");
+      return;
+    }
     
     let status = document.querySelector('input[name="status"]:checked').value;
     document.getElementById('loading').style.display = "block";
     document.getElementById('btn-send').disabled = true;
 
-    if (typeof google !== 'undefined') {
-      google.script.run.withSuccessHandler(function(response) {
-        document.getElementById('loading').style.display = "none";
-        document.getElementById('btn-send').disabled = false;
-        if(response.success) {
-          animateDashboardChange(response.rekap);
-          previewBox.style.display = "none";
-          base64Image = "";
-          document.getElementById('file-camera').value = "";
-          labelKamera.innerText = "📸 Ambil Foto Langsung";
-          labelKamera.classList.remove('has-photo');
-        } else {
-          alert("Gagal Menyimpan Data: " + response.error);
-        }
-      }).uploadData(base64Image, status);
-    } else {
-      alert("Aplikasi berjalan standalone (Google Apps Script tidak terdeteksi).");
+    // Mengirim data menggunakan POST Method ke Google Apps Script (CORS Friendly via GitHub)
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      mode: "no-cors", // Mode aman lintas domain untuk Apps Script Web App
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        "image": base64Image,
+        "status": status,
+        "namaToko": namaToko,
+        "keterangan": keterangan
+      })
+    })
+    .then(() => {
+      // Karena menggunakan "no-cors", respons tidak bisa dibaca langsung secara detail, 
+      // Maka kita langsung anggap sukses dan lakukan update dashboard cadangan secara manual.
       document.getElementById('loading').style.display = "none";
       document.getElementById('btn-send').disabled = false;
-    }
+      
+      alert("Data berhasil dikirim!");
+      
+      // Reset Form
+      previewBox.style.display = "none";
+      base64Image = "";
+      document.getElementById('file-camera').value = "";
+      document.getElementById('nama-toko').value = "";
+      document.getElementById('keterangan').value = "";
+      labelKamera.innerText = "📸 Ambil Foto Langsung";
+      labelKamera.classList.remove('has-photo');
+
+      // Refresh dashboard ulang setelah input data baru
+      setTimeout(() => {
+        fetch(WEB_APP_URL + "?action=getDashboard")
+          .then(res => res.json())
+          .then(data => animateDashboardChange(data));
+      }, 2000);
+    })
+    .catch(error => {
+      alert("Terjadi masalah jaringan saat menyimpan data.");
+      document.getElementById('loading').style.display = "none";
+      document.getElementById('btn-send').disabled = false;
+    });
   }
 
   function updateDashboard(rekap) {
-    document.getElementById('dash-terpasang').innerText = rekap.terpasang;
-    document.getElementById('dash-tidak').innerText = rekap.tidakTerpasang;
-    document.getElementById('dash-tutup').innerText = rekap.tutupPermanen;
+    if(!rekap) return;
+    document.getElementById('dash-terpasang').innerText = rekap.terpasang || 0;
+    document.getElementById('dash-tidak').innerText = rekap.tidakTerpasang || 0;
+    document.getElementById('dash-tutup').innerText = rekap.tutupPermanen || 0;
   }
 
   function animateDashboardChange(newRekap) {
+    if(!newRekap) return;
     let targets = [
-      { id: 'dash-terpasang', val: newRekap.terpasang },
-      { id: 'dash-tidak', val: newRekap.tidakTerpasang },
-      { id: 'dash-tutup', val: newRekap.tutupPermanen }
+      { id: 'dash-terpasang', val: newRekap.terpasang || 0 },
+      { id: 'dash-tidak', val: newRekap.tidakTerpasang || 0 },
+      { id: 'dash-tutup', val: newRekap.tutupPermanen || 0 }
     ];
     targets.forEach(item => {
       let el = document.getElementById(item.id);
