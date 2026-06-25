@@ -3,32 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aplikasi Google Apps Script Saya</title>
+    <title>Aplikasi Utama</title>
     <style>
-        /* Menghilangkan semua ruang kosong bawaan browser */
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Mencegah double scrollbar */
+            overflow: hidden;
             background-color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-
-        /* Mengatur kontainer utama agar memenuhi layar */
-        .app-container {
-            position: absolute;
+        .full-screen-container {
+            position: fixed;
             top: 0;
             left: 0;
-            top: 0;
             bottom: 0;
+            right: 0;
             width: 100%;
             height: 100%;
             border: none;
+            margin: 0;
+            padding: 0;
         }
-
-        /* Mengatur iframe Apps Script agar responsif dan berfungsi penuh */
         iframe {
             width: 100%;
             height: 100%;
@@ -39,12 +35,11 @@
 </head>
 <body>
 
-    <div class="app-container">
+    <div class="full-screen-container">
         <iframe 
             src="https://script.google.com/macros/s/AKfycbxX5fAOmIw-MbxwEl0iKtStLU-8zSzsYcjpm_LvRG7tJb30UyO4VM9klBSo3SoZ9tFs/exec" 
-            allow="geolocation; microphone; camera; midi; encrypted-media; gyroscope; picture-in-picture" 
+            allow="geolocation; microphone; camera; encrypted-media;" 
             allowfullscreen>
-            Memuat Aplikasi...
         </iframe>
     </div>
 
